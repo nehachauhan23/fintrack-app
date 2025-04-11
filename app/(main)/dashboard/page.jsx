@@ -24,7 +24,7 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 px-4 md:px-8">
       {/* Budget Progress */}
       <BudgetProgress
         initialBudget={budgetData?.budget}
@@ -38,19 +38,26 @@ export default async function DashboardPage() {
       />
 
       {/* Accounts Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         <CreateAccountDrawer>
-          <Card className="hover:shadow-md transition-shadow cursor-pointer border-dashed">
-            <CardContent className="flex flex-col items-center justify-center text-muted-foreground h-full pt-5">
-              <Plus className="h-10 w-10 mb-2" />
-              <p className="text-sm font-medium">Add New Account</p>
+          <Card className="hover:shadow-xl transition-shadow cursor-pointer border-dashed border-2 border-gray-300 rounded-lg p-5 flex items-center justify-center text-center">
+            <CardContent>
+              <Plus className="h-12 w-12 mb-4 text-gray-600" />
+              <p className="text-sm font-medium text-gray-600">Add New Account</p>
             </CardContent>
           </Card>
         </CreateAccountDrawer>
-        {accounts.length > 0 &&
-          accounts?.map((account) => (
-            <AccountCard key={account.id} account={account} />
-          ))}
+
+        {/* Add a Suspense fallback for accounts */}
+        <Suspense>
+          {accounts.length > 0 ? (
+            accounts.map((account) => (
+              <AccountCard key={account.id} account={account} />
+            ))
+          ) : (
+            <p className="text-center text-gray-500 col-span-full">No accounts found</p>
+          )}
+        </Suspense>
       </div>
     </div>
   );

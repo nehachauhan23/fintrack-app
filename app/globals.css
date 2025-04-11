@@ -82,7 +82,7 @@ html {
     bg-gradient-to-r from-green-600 via-yellow-400 to-yellow-500
 
   }
-  .gradient-title {
+  . {
     @apply gradient font-extrabold tracking-tighter pr-2 pb-2 text-transparent bg-clip-text;
   }
 }

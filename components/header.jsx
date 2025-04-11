@@ -5,34 +5,38 @@ import { Button } from "./ui/button";
 import { LayoutDashboard, PenBox } from "lucide-react";
 import { checkUser } from "@/lib/checkUser";
 
-const Header = async() => {
+const Header = async () => {
   const user = await checkUser();
   return (
-    <div className="fixed top-0 w-full bg-white/80 backdrop-blue-md z-50 border-b box-border">
-      <nav className="container mx-auto max-w-full px-4 py-4 flex items-center justify-between overflow-x-hidden">
-        <Link href="/" className="flex items-center">
+    <div className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b box-border shadow-md">
+      <nav className="container mx-auto max-w-full px-4 py-4 flex items-center justify-between flex-wrap">
+        <Link href="/" className="flex items-center space-x-2">
           <Image
-            src="https://img.icons8.com/?size=100&id=113854&format=png&color=000000" // External image URL
+            src="/assets/images/fintracklogo.png"
             width={75}
             height={60}
             alt="FinTrack Logo"
           />
-          <span className=" gradient-title font-bold text-3xl">FinTrack</span>
+          <span className=" font-bold text-3xl text-[#254c87] ">
+            FinTrack
+          </span>
         </Link>
 
         <div className="flex items-center space-x-4">
           <SignedIn>
             <Link
-              href={"/dashboard"}
-              className="text-gray-600 hover:text-blue-500 flex items-center gap-2"
+              href="/dashboard"
+              className="text-gray-600 hover:text-blue-500 flex items-center gap-2 transition-colors duration-300"
+              aria-label="Go to Dashboard"
             >
-              <Button variant="outline">
+              <Button variant="outline" className="px-4 py-2">
                 <LayoutDashboard size={18} />
                 <span className="hidden md:inline">Dashboard</span>
               </Button>
             </Link>
-            <Link href={"/transaction/create"}>
-              <Button  className="display-flex items-center gap-2">
+
+            <Link href="/transaction/create">
+              <Button className="px-4 py-2 flex items-center gap-2 transition-all duration-300 hover:scale-105">
                 <PenBox size={18} />
                 <span className="hidden md:inline">Add Transaction</span>
               </Button>
@@ -41,15 +45,20 @@ const Header = async() => {
 
           <SignedOut>
             <SignInButton forceRedirectUrl="/dashboard">
-              <Button variant="outline">Login</Button>
+              <Button variant="outline" className="px-4 py-2">
+                Login
+              </Button>
             </SignInButton>
           </SignedOut>
+
           <SignedIn>
-            <UserButton appearance={{
-              elements:{
-                avatarBox: "w-10 h-10"
-              }
-            }} />
+            <UserButton
+              appearance={{
+                elements: {
+                  avatarBox: "w-12 h-12 border-2 border-blue-500 rounded-full",
+                },
+              }}
+            />
           </SignedIn>
         </div>
       </nav>
