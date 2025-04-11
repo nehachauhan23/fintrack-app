@@ -4,10 +4,16 @@ import { SignIn, useSignIn } from "@clerk/nextjs";
 import { useRouter } from "next/navigation"; // App Router uses this!
 
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 
 export default function Page() {
   const { signIn, setActive } = useSignIn();
   const router = useRouter();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
+
 
   const handleDemoLogin = async () => {
     try {
