@@ -37,7 +37,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -278,7 +278,6 @@ export function TransactionTable({ transactions }) {
 
       {/* Transactions Table */}
       <div className="rounded-2xl border bg-white shadow-[0_4px_30px_rgba(0,0,0,0.05)] backdrop-blur-sm p-10">
-
         <Table>
           <TableHeader>
             <TableRow>
@@ -348,14 +347,31 @@ export function TransactionTable({ transactions }) {
                     onCheckedChange={() => handleSelect(transaction.id)}
                   />
                 </TableCell>
-                <TableCell>{format(new Date(transaction.date), "PP")}</TableCell>
+                <TableCell>
+                  {format(new Date(transaction.date), "PP")}
+                </TableCell>
                 <TableCell>{transaction.description}</TableCell>
                 <TableCell>
-                  <Badge variant="outline" color={categoryColors[transaction.category]}>
+                  <Badge
+                    variant="outline"
+                    color={categoryColors[transaction.category]}
+                  >
                     {transaction.category}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-right">{`$${transaction.amount.toFixed(2)}`}</TableCell>
+                <TableCell
+                  className={cn(
+                    "text-right font-bold",
+                    transaction.type === "INCOME"
+                      ? "text-green-600"
+                      : "text-amber-600	"
+                  )}
+                >
+                  {transaction.type === "INCOME" ? "+" : "-"}$
+                  {transaction.amount.toFixed(2)}
+                </TableCell>
+
+                {/* <TableCell className="text-right">{`$${transaction.amount.toFixed(2)}`}</TableCell> */}
                 <TableCell>
                   {transaction.isRecurring ? (
                     <Badge variant="filled" color="primary">
@@ -373,7 +389,13 @@ export function TransactionTable({ transactions }) {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => router.push(`/transaction/create?edit=${transaction.id}`)}>
+                      <DropdownMenuItem
+                        onClick={() =>
+                          router.push(
+                            `/transaction/create?edit=${transaction.id}`
+                          )
+                        }
+                      >
                         Edit
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -417,4 +439,3 @@ export function TransactionTable({ transactions }) {
     </div>
   );
 }
-
