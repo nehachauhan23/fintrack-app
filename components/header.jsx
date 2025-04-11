@@ -9,7 +9,7 @@ const Header = async () => {
   const user = await checkUser();
   return (
     <div className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b box-border shadow-md">
-      <nav className="container mx-auto max-w-full px-4 py-4 flex items-center justify-between flex-wrap">
+      <nav className="container mx-auto max-w-full px-4 py-4 flex items-center justify-between flex-nowrap space-x-2 overflow-x-auto">
         <Link href="/" className="flex items-center space-x-2">
           <Image
             src="/assets/images/fintracklogo.png"
@@ -17,9 +17,10 @@ const Header = async () => {
             height={60}
             alt="FinTrack Logo"
           />
-          <span className=" font-bold text-3xl text-[#254c87] ">
+          <span className="hidden sm:inline font-bold text-3xl text-[#254c87]">
             FinTrack
           </span>
+
         </Link>
 
         <div className="flex items-center space-x-4">
