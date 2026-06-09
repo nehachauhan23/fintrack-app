@@ -1,35 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  Legend,
+  PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
 } from "recharts";
 import { format } from "date-fns";
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
-
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ArrowUpRight, ArrowDownRight, TrendingUp } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { categoryColors } from "@/data/categories";
 
-const COLORS = [
-  "#FF6B6B",
-  "#4ECDC4",
-  "#45B7D1",
-  "#96CEB4",
-  "#FFEEAD",
-  "#D4A5A5",
-  "#9FA8DA",
+const PIE_COLORS = [
+  "#3b82f6", "#10b981", "#f59e0b", "#ef4444",
+  "#8b5cf6", "#06b6d4", "#f97316", "#84cc16",
 ];
 
 export function DashboardOverview({ accounts, transactions }) {
@@ -37,106 +21,129 @@ export function DashboardOverview({ accounts, transactions }) {
     accounts.find((a) => a.isDefault)?.id || accounts[0]?.id
   );
 
-  // Filter transactions for selected account
-  const accountTransactions = transactions.filter(
-    (t) => t.accountId === selectedAccountId
+  const accountTransactions = useMemo(
+    () => transactions.filter((t) => t.accountId === selectedAccountId),
+    [transactions, selectedAccountId]
   );
 
-  // Get recent transactions (last 5)
-  const recentTransactions = accountTransactions
-    .sort((a, b) => new Date(b.date) - new Date(a.date))
-    .slice(0, 5);
-
-  // Calculate expense breakdown for current month
-  const currentDate = new Date();
-  const currentMonthExpenses = accountTransactions.filter((t) => {
-    const transactionDate = new Date(t.date);
-    return (
-      t.type === "EXPENSE" &&
-      transactionDate.getMonth() === currentDate.getMonth() &&
-      transactionDate.getFullYear() === currentDate.getFullYear()
-    );
-  });
-
-  // Group expenses by category
-  const expensesByCategory = currentMonthExpenses.reduce((acc, transaction) => {
-    const category = transaction.category;
-    if (!acc[category]) {
-      acc[category] = 0;
-    }
-    acc[category] += transaction.amount;
-    return acc;
-  }, {});
-
-  // Format data for pie chart
-  const pieChartData = Object.entries(expensesByCategory).map(
-    ([category, amount]) => ({
-      name: category,
-      value: amount,
-    })
+  const recentTransactions = useMemo(
+    () => [...accountTransactions]
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 5),
+    [accountTransactions]
   );
+
+  const pieChartData = useMemo(() => {
+    const now = new Date();
+    const expenses = accountTransactions.filter((t) => {
+      const d = new Date(t.date);
+      return (
+        t.type === "EXPENSE" &&
+        d.getMonth() === now.getMonth() &&
+        d.getFullYear() === now.getFullYear()
+      );
+    });
+
+    const byCategory = expenses.reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + t.amount;
+      return acc;
+    }, {});
+
+    return Object.entries(byCategory)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [accountTransactions]);
+
+  const monthlyTotals = useMemo(() => {
+    const now = new Date();
+    return accountTransactions
+      .filter((t) => {
+        const d = new Date(t.date);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      })
+      .reduce((acc, t) => {
+        if (t.type === "INCOME") acc.income += t.amount;
+        else acc.expense += t.amount;
+        return acc;
+      }, { income: 0, expense: 0 });
+  }, [accountTransactions]);
 
   return (
-    <div className="grid gap-4 md:grid-cols-2">
-      {/* Recent Transactions Card */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="text-base font-normal">
-            Recent Transactions
-          </CardTitle>
-          <Select
-            value={selectedAccountId}
-            onValueChange={setSelectedAccountId}
-          >
-            <SelectTrigger className="w-[140px]">
+    <div className="grid gap-5 md:grid-cols-2">
+      {/* Recent Transactions */}
+      <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <CardHeader className="flex flex-row items-center justify-between pb-4 pt-5">
+          <div>
+            <CardTitle className="text-base font-semibold text-gray-900">Recent Transactions</CardTitle>
+            <p className="text-xs text-gray-400 mt-0.5">Last 5 activity</p>
+          </div>
+          <Select value={selectedAccountId} onValueChange={setSelectedAccountId}>
+            <SelectTrigger className="w-[130px] h-8 text-xs border-gray-200">
               <SelectValue placeholder="Select account" />
             </SelectTrigger>
             <SelectContent>
-              {accounts.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.name}
+              {accounts.map((a) => (
+                <SelectItem key={a.id} value={a.id} className="text-xs">
+                  {a.name}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentTransactions.length === 0 ? (
-              <p className="text-center text-muted-foreground py-4">
-                No recent transactions
+
+        <CardContent className="pb-5">
+          {/* Monthly summary chips */}
+          <div className="flex gap-3 mb-5">
+            <div className="flex-1 bg-emerald-50 rounded-xl p-3 text-center">
+              <p className="text-xs text-gray-400 mb-0.5">Income</p>
+              <p className="font-bold text-emerald-600 text-sm">${monthlyTotals.income.toFixed(2)}</p>
+            </div>
+            <div className="flex-1 bg-red-50 rounded-xl p-3 text-center">
+              <p className="text-xs text-gray-400 mb-0.5">Expenses</p>
+              <p className="font-bold text-red-500 text-sm">${monthlyTotals.expense.toFixed(2)}</p>
+            </div>
+            <div className={cn(
+              "flex-1 rounded-xl p-3 text-center",
+              monthlyTotals.income - monthlyTotals.expense >= 0 ? "bg-blue-50" : "bg-orange-50"
+            )}>
+              <p className="text-xs text-gray-400 mb-0.5">Net</p>
+              <p className={cn(
+                "font-bold text-sm",
+                monthlyTotals.income - monthlyTotals.expense >= 0 ? "text-blue-600" : "text-orange-600"
+              )}>
+                ${(monthlyTotals.income - monthlyTotals.expense).toFixed(2)}
               </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {recentTransactions.length === 0 ? (
+              <p className="text-center text-gray-400 text-sm py-6">No transactions yet</p>
             ) : (
-              recentTransactions.map((transaction) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between"
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium leading-none">
-                      {transaction.description || "Untitled Transaction"}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(transaction.date), "PP")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={cn(
-                        "flex items-center",
-                        transaction.type === "EXPENSE"
-                          ? "text-red-500"
-                          : "text-green-500"
-                      )}
-                    >
-                      {transaction.type === "EXPENSE" ? (
-                        <ArrowDownRight className="mr-1 h-4 w-4" />
-                      ) : (
-                        <ArrowUpRight className="mr-1 h-4 w-4" />
-                      )}
-                      ${transaction.amount.toFixed(2)}
+              recentTransactions.map((t) => (
+                <div key={t.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
+                      t.type === "EXPENSE" ? "bg-red-50" : "bg-emerald-50"
+                    )}>
+                      {t.type === "EXPENSE"
+                        ? <ArrowDownRight size={14} className="text-red-500" />
+                        : <ArrowUpRight size={14} className="text-emerald-500" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-800 leading-tight">
+                        {t.description || "Untitled"}
+                      </p>
+                      <p className="text-xs text-gray-400">{format(new Date(t.date), "MMM d")}</p>
                     </div>
                   </div>
+                  <span className={cn(
+                    "text-sm font-semibold",
+                    t.type === "EXPENSE" ? "text-red-500" : "text-emerald-600"
+                  )}>
+                    {t.type === "EXPENSE" ? "-" : "+"}${t.amount.toFixed(2)}
+                  </span>
                 </div>
               ))
             )}
@@ -144,18 +151,18 @@ export function DashboardOverview({ accounts, transactions }) {
         </CardContent>
       </Card>
 
-      {/* Expense Breakdown Card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base font-normal">
-            Monthly Expense Breakdown
-          </CardTitle>
+      {/* Expense Breakdown */}
+      <Card className="rounded-2xl border-gray-100 shadow-sm">
+        <CardHeader className="pb-2 pt-5">
+          <CardTitle className="text-base font-semibold text-gray-900">Expense Breakdown</CardTitle>
+          <p className="text-xs text-gray-400">Current month by category</p>
         </CardHeader>
-        <CardContent className="p-0 pb-5">
+        <CardContent className="pb-5">
           {pieChartData.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">
-              No expenses this month
-            </p>
+            <div className="flex flex-col items-center justify-center h-[260px] text-gray-300">
+              <TrendingUp size={40} className="mb-3 opacity-40" />
+              <p className="text-sm text-gray-400">No expenses this month</p>
+            </div>
           ) : (
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -163,28 +170,35 @@ export function DashboardOverview({ accounts, transactions }) {
                   <Pie
                     data={pieChartData}
                     cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    fill="#8884d8"
+                    cy="45%"
+                    innerRadius={55}
+                    outerRadius={90}
+                    paddingAngle={3}
                     dataKey="value"
-                    label={({ name, value }) => `${name}: $${value.toFixed(2)}`}
                   >
-                    {pieChartData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={COLORS[index % COLORS.length]}
-                      />
+                    {pieChartData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>
                   <Tooltip
-                    formatter={(value) => `$${value.toFixed(2)}`}
+                    formatter={(value) => [`$${value.toFixed(2)}`, undefined]}
                     contentStyle={{
-                      backgroundColor: "hsl(var(--popover))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "var(--radius)",
+                      backgroundColor: "#fff",
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "12px",
+                      fontSize: "12px",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                     }}
                   />
-                  <Legend />
+                  <Legend
+                    iconType="circle"
+                    iconSize={8}
+                    formatter={(value) => (
+                      <span style={{ fontSize: "11px", color: "#6b7280" }}>
+                        {value.charAt(0).toUpperCase() + value.slice(1)}
+                      </span>
+                    )}
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </div>

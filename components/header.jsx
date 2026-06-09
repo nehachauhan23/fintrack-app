@@ -1,70 +1,119 @@
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
-import Image from "next/image";
+"use client";
+
 import Link from "next/link";
+import Image from "next/image";
+import { useAuth } from "@/context/auth-context";
 import { Button } from "./ui/button";
-import { LayoutDashboard, PenBox } from "lucide-react";
-import { checkUser } from "@/lib/checkUser";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
+import {
+  LayoutDashboard,
+  PenBox,
+  LogOut,
+  User,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 
-const Header = async () => {
-  const user = await checkUser();
+export default function Header() {
+  const { user, loading, logout } = useAuth();
+
   return (
-    <div className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b box-border shadow-md">
-      <nav className="container mx-auto max-w-full px-4 py-4 flex items-center justify-between flex-nowrap space-x-2 overflow-x-auto">
-        <Link href="/" className="flex items-center space-x-2">
+    <header className="fixed top-0 w-full bg-white/90 backdrop-blur-lg z-50 border-b border-gray-100 shadow-sm">
+      <nav className="container mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2 flex-shrink-0">
           <Image
-            src="/assets/images/fintracklogo.png"
-            width={75}
-            height={60}
-            alt="FinTrack Logo"
+            src="/assets/images/logo.png"
+            width={150}
+            height={32}
+            alt="FinTrack"
+            className="object-contain"
           />
-          <span className="hidden sm:inline font-bold text-3xl text-[#254c87]">
-            FinTrack
-          </span>
-
+          {/* <span className="font-bold text-xl text-blue-700 tracking-tight">FinTrack</span> */}
         </Link>
 
-        <div className="flex items-center space-x-4">
-          <SignedIn>
-            <Link
-              href="/dashboard"
-              className="text-gray-600 hover:text-blue-500 flex items-center gap-2 transition-colors duration-300"
-              aria-label="Go to Dashboard"
-            >
-              <Button variant="outline" className="px-4 py-2">
-                <LayoutDashboard size={18} />
-                <span className="hidden md:inline">Dashboard</span>
-              </Button>
-            </Link>
+        {/* Nav actions */}
+        <div className="flex items-center gap-3">
+          {loading ? (
+            <Loader2 size={18} className="animate-spin text-gray-400" />
+          ) : user ? (
+            <>
+              {/* Dashboard link */}
+              <Link
+                href="/dashboard"
+                className="hidden sm:flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 transition-colors"
+              >
+                <LayoutDashboard size={15} />
+                Dashboard
+              </Link>
 
-            <Link href="/transaction/create">
-              <Button className="px-4 py-2 flex items-center gap-2 transition-all duration-300 hover:scale-105">
-                <PenBox size={18} />
-                <span className="hidden md:inline">Add Transaction</span>
-              </Button>
-            </Link>
-          </SignedIn>
+              {/* Add transaction */}
+              <Link href="/transaction/create">
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 shadow-sm">
+                  <PenBox size={14} />
+                  <span className="hidden sm:inline">Add Transaction</span>
+                  <span className="sm:hidden">Add</span>
+                </Button>
+              </Link>
 
-          <SignedOut>
-            <SignInButton forceRedirectUrl="/dashboard">
-              <Button variant="outline" className="px-4 py-2">
-                Login
-              </Button>
-            </SignInButton>
-          </SignedOut>
-
-          <SignedIn>
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "w-12 h-12 border-2 border-blue-500 rounded-full",
-                },
-              }}
-            />
-          </SignedIn>
+              {/* User menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-gray-100 transition-colors focus:outline-none">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white text-sm font-semibold flex-shrink-0">
+                      {user.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="hidden md:block text-sm font-medium text-gray-700 max-w-[120px] truncate">
+                      {user.name}
+                    </span>
+                    <ChevronDown size={14} className="text-gray-400 hidden md:block" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <div className="px-3 py-2">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
+                    <p className="text-xs text-gray-400 truncate">{user.email}</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/dashboard" className="flex items-center gap-2 cursor-pointer">
+                      <LayoutDashboard size={14} />
+                      Dashboard
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-600 focus:text-red-600 focus:bg-red-50 gap-2 cursor-pointer"
+                    onClick={logout}
+                  >
+                    <LogOut size={14} />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Link href="/sign-in">
+                <Button variant="ghost" size="sm" className="text-gray-600 hover:text-blue-600">
+                  Sign in
+                </Button>
+              </Link>
+              <Link href="/sign-up">
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Get Started
+                </Button>
+              </Link>
+            </div>
+          )}
         </div>
       </nav>
-    </div>
+    </header>
   );
-};
-
-export default Header;
+}
