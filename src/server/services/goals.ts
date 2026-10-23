@@ -85,7 +85,7 @@ export async function contributeToGoal(userId: string, id: string, input: { kind
     const signed = input.kind === "deposit" ? new D(amount) : new D(amount).neg();
     const saved = goal.savedAmount.plus(signed);
     if (saved.isNegative()) throw invalid("You can't withdraw more than has been saved.", { amount: ["Exceeds the saved amount"] });
-    await tx.goalContribution.create({ data: { goalId: id, userId, amount: signed, note: input.note?.trim() || null, date, kind: signed } });
+    await tx.goalContribution.create({ data: { goalId: id, userId, amount: signed, note: input.note?.trim() || null, date} });
     const updated = await tx.goal.update({
       where: { id },
       data: { savedAmount: saved, completedAt: saved.gte(goal.targetAmount) ? (goal.completedAt ?? new Date()) : null },
