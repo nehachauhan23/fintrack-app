@@ -1,96 +1,285 @@
+
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "postgresql"
 }
 
 model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
+  id           String   @id @default(uuid())
+  email        String   @unique
   name         String
   passwordHash String
-  imageUrl     String?
-  transactions Transaction[]
-  accounts     Account[]
-  budgets      Budget[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  currency     String   @default("USD")
+  emailAlerts  Boolean  @default(true)
+  aiEnabled    Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  accounts          Account[]
+  budgets           Budget[]
+  transactions      Transaction[]
+  recurringRules    RecurringRule[]
+  goals             Goal[]
+  goalContributions GoalContribution[]
+  merchantRules     MerchantRule[]
+  sessions          Session[]
+  aiUsage           AiUsage[]
+  aiInsights        AiInsight[]
+  auditLogs         AuditLog[]
 
   @@map("users")
 }
 
 model Account {
-  id           String        @id @default(uuid())
-  name         String
-  type         AccountType
-  balance      Decimal       @default(0)
-  isDefault    Boolean       @default(false)
-  userId       String
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactions Transaction[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id             String      @id @default(uuid())
+  name           String
+  type           AccountType
+  balance        Decimal     @default(0) @db.Decimal(14, 2)
+  openingBalance Decimal     @default(0) @db.Decimal(14, 2)
+  isDefault      Boolean     @default(false)
+  archivedAt     DateTime?   @db.Timestamp(3)
+  userId         String
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[]
+  recurringRules RecurringRule[]
 
   @@index([userId])
   @@map("accounts")
 }
 
 model Transaction {
-  id                String             @id @default(uuid())
-  type              TransactionType
-  amount            Decimal
-  description       String?
-  date              DateTime
-  category          String
-  receiptUrl        String?
-  isRecurring       Boolean            @default(false)
-  recurringInterval RecurringInterval?
-  nextRecurringDate DateTime?
-  lastProcessed     DateTime?
-  status            TransactionStatus  @default(COMPLETED)
-  userId            String
-  user              User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accountId         String
-  account           Account            @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
+  id               String            @id @default(uuid())
+  type             TransactionType
+  amount           Decimal           @db.Decimal(14, 2)
+  description      String?
+  merchant         String?
+  category         String
+  date             DateTime          @db.Date
+  source           TransactionSource @default(MANUAL)
+  aiCategorized    Boolean           @default(false)
+  transferGroupId  String?
+  recurringRuleId  String?
+  recurringOn      DateTime?         @db.Date
+  importHash       String?
+  userId           String
+  accountId        String
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
 
-  @@index([userId])
-  @@index([accountId])
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  recurringRule RecurringRule? @relation(fields: [recurringRuleId], references: [id], onDelete: SetNull)
+
+  @@unique([recurringRuleId, recurringOn])
+  @@unique([userId, importHash])
+  @@index([userId, date(sort: Desc)])
+  @@index([accountId, date])
+  @@index([userId, category, date])
+  @@index([transferGroupId])
   @@map("transactions")
 }
 
-model Budget {
-  id            String    @id @default(uuid())
-  amount        Decimal
-  lastAlertSent DateTime?
-  userId        String    @unique
-  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+model RecurringRule {
+  id          String           @id @default(uuid())
+  userId      String
+  accountId   String
+  type        TransactionType
+  amount      Decimal          @db.Decimal(14, 2)
+  category    String
+  description String?
+  merchant    String?
+  interval    RecurringInterval
+  startDate   DateTime         @db.Date
+  endDate     DateTime?        @db.Date
+  nextRunOn   DateTime         @db.Date
+  lastRunOn   DateTime?        @db.Date
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account      Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@index([isActive, nextRunOn])
   @@index([userId])
+  @@map("recurring_rules")
+}
+
+model Budget {
+  id            String   @id @default(uuid())
+  amount        Decimal  @db.Decimal(14, 2)
+  category      String   @default("all")
+  userId        String
+  alertedPeriod String?
+  alertedLevel  Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
   @@map("budgets")
 }
 
-enum TransactionType {
-  INCOME
-  EXPENSE
+model Goal {
+  id           String   @id @default(uuid())
+  userId       String
+  name         String
+  targetAmount Decimal  @db.Decimal(14, 2)
+  savedAmount  Decimal  @default(0) @db.Decimal(14, 2)
+  deadline     DateTime? @db.Date
+  completedAt  DateTime? @db.Timestamp(3)
+  archivedAt   DateTime? @db.Timestamp(3)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contributions GoalContribution[]
+
+  @@index([userId])
+  @@map("goals")
+}
+
+model GoalContribution {
+  id        String   @id @default(uuid())
+  goalId    String
+  userId    String
+  amount    Decimal  @db.Decimal(14, 2)
+  note      String?
+  date      DateTime @db.Date
+  createdAt DateTime @default(now())
+
+  goal Goal @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([goalId])
+  @@map("goal_contributions")
+}
+
+model MerchantRule {
+  id        String     @id @default(uuid())
+  userId    String
+  key       String
+  category  String
+  hits      Int        @default(1)
+  source    RuleSource @default(USER)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, key])
+  @@map("merchant_rules")
+}
+
+model Session {
+  id         String   @id @default(uuid())
+  userId     String
+  tokenHash  String   @unique
+  expiresAt  DateTime @db.Timestamp(3)
+  lastUsedAt DateTime @default(now()) @db.Timestamp(3)
+  createdAt  DateTime @default(now()) @db.Timestamp(3)
+  userAgent  String?
+  ip         String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model AiUsage {
+  id               String   @id @default(uuid())
+  userId           String?
+  day              String
+  feature          String
+  model            String?
+  status           String
+  promptTokens     Int?
+  completionTokens Int?
+  latencyMs        Int?
+  createdAt        DateTime @default(now()) @db.Timestamp(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([day])
+  @@index([userId, day])
+  @@map("ai_usage")
+}
+
+model AiInsight {
+  id        String      @id @default(uuid())
+  userId    String
+  kind      InsightKind
+  periodKey String
+  dataHash  String
+  payload   Json
+  model     String?
+  createdAt DateTime    @default(now()) @db.Timestamp(3)
+  updatedAt DateTime    @updatedAt @db.Timestamp(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, periodKey])
+  @@map("ai_insights")
+}
+
+model RateLimit {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+
+  @@index([resetAt])
+  @@map("rate_limits")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  ip        String?
+  meta      Json?
+  createdAt DateTime @default(now()) @db.Timestamp(3)
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@map("audit_logs")
 }
 
 enum AccountType {
   CURRENT
   SAVINGS
+  CREDIT_CARD
+  CASH
+  INVESTMENT
 }
 
-enum TransactionStatus {
-  PENDING
-  COMPLETED
-  FAILED
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER_IN
+  TRANSFER_OUT
+}
+
+enum TransactionSource {
+  MANUAL
+  RECEIPT_SCAN
+  AI_ENTRY
+  CSV_IMPORT
+  RECURRING
+  TRANSFER
 }
 
 enum RecurringInterval {
@@ -98,4 +287,14 @@ enum RecurringInterval {
   WEEKLY
   MONTHLY
   YEARLY
+}
+
+enum RuleSource {
+  USER
+  AI
+}
+
+enum InsightKind {
+  MONTHLY_SUMMARY
+  BUDGET_SUGGESTIONS
 }

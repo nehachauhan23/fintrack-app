@@ -1,0 +1,122 @@
+@import "tailwindcss";
+
+/* ── FinTrack "ledger" design tokens ───────────────────────────────────────────
+   Ink on cool paper, ruled lines instead of boxed cards, one deep-teal accent.
+   Colour is reserved for meaning: teal = action, green = money in, rust = money out. */
+:root {
+  --paper: #f3f5f6;
+  --surface: #ffffff;
+  --ink: #101820;
+  --ink-2: #4a5560;
+  --ink-3: #78848e;
+  --rule: #dde2e5;
+  --accent: #0a6b66;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefec;
+  --gain: #17784a;
+  --loss: #b4411b;
+  --warn: #9a6a12;
+  --warn-soft: #f6ead0;
+  --loss-soft: #f7e0d6;
+  --gain-soft: #dcefe3;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0b1215;
+    --surface: #111a1e;
+    --ink: #e8eef0;
+    --ink-2: #a3b1b8;
+    --ink-3: #73828b;
+    --rule: #223036;
+    --accent: #3cb5ac;
+    --accent-ink: #06201e;
+    --accent-soft: #11302e;
+    --gain: #4cc38a;
+    --loss: #f0845c;
+    --warn: #e0a94a;
+    --warn-soft: #33270f;
+    --loss-soft: #351d13;
+    --gain-soft: #12301f;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-gain: var(--gain);
+  --color-loss: var(--loss);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-loss-soft: var(--loss-soft);
+  --color-gain-soft: var(--gain-soft);
+  --font-sans: "Hanken Grotesk Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
+}
+
+html {
+  color-scheme: light dark;
+  scroll-padding-top: 5rem;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+@utility num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+@utility display {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+@utility eyebrow {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 0.45s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .rise-2 { animation-delay: 0.06s; }
+  .rise-3 { animation-delay: 0.12s; }
+  .rise-4 { animation-delay: 0.18s; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+  }
+}
+
+.recharts-text { fill: var(--ink-3) !important; font-size: 12px; }
+.recharts-cartesian-grid line { stroke: var(--rule); }

@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: fintrack
+          POSTGRES_PASSWORD: fintrack
+          POSTGRES_DB: fintrack
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U fintrack" --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://fintrack:fintrack@localhost:5432/fintrack
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm test
+      - name: Migrate both databases
+        run: |
+          PGPASSWORD=fintrack psql -h localhost -U fintrack -d fintrack -c 'CREATE DATABASE fintrack_test'
+          npx prisma migrate deploy
+          DATABASE_URL=postgresql://fintrack:fintrack@localhost:5432/fintrack_test npx prisma migrate deploy
+      - name: Integration tests (real PostgreSQL)
+        run: npm run test:integration
+        env:
+          DATABASE_URL: postgresql://fintrack:fintrack@localhost:5432/fintrack_test
+      - name: Build
+        run: npm run build
+      - name: Smoke test the production server
+        run: |
+          npm run db:seed
+          npm start &
+          for i in $(seq 1 30); do curl -sf localhost:3000/api/health && break; sleep 1; done
+          npm run test:smoke
